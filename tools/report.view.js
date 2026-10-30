@@ -81,6 +81,16 @@ window.__ModuleLoader__.load({
       fill: { height: '100%', borderRadius: 999, background: '#4f9de8' },
       num: { textAlign: 'right', color: '#5c7c85' },
       foot: { fontSize: 11, color: '#9db8be', borderTop: '1px solid #eaf3f5', paddingTop: 10 },
+      steps: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 },
+      step: { padding: '12px 13px', borderRadius: 12, background: '#f7fbfc', border: '1px solid #eaf3f5' },
+      stepN: { fontSize: 10.5, fontWeight: 600, color: '#8fb3bb', letterSpacing: '.08em' },
+      stepT: { fontSize: 13, fontWeight: 650, margin: '2px 0 4px' },
+      stepD: { fontSize: 11.5, color: '#5c7c85', lineHeight: 1.65 },
+      subline: { fontSize: 11.5, color: '#7b979e' },
+      rule: { padding: '11px 13px', borderRadius: 12, border: '1px solid #eaf3f5', background: '#fff', display: 'grid', gap: 4 },
+      ruleTitle: { fontSize: 12.5, fontWeight: 650, color: '#2f5b64' },
+      ruleLine: { fontSize: 12.5, color: '#17323a', lineHeight: 1.65 },
+      ruleWhy: { fontSize: 11, color: '#8aa6ad' },
     };
 
     const SEGMENTS = [
@@ -90,26 +100,12 @@ window.__ModuleLoader__.load({
       { key: 'long', label: '>200 字', color: '#57b98a' },
     ];
 
-    const buildPairs = (s) => [
-      {
-        title: '你说的「这个」我常常找不到',
-        before: '这个表格怎么还没铺满',
-        after: 'el-table 右侧要贴住窗口右边缘；窗口 1721px 时也贴住',
-        why: `指代句占 ${s.rates.reference}%，我常要回查两三轮才锁定对象。`,
-      },
-      {
-        title: '形容词没有判据，我只能猜',
-        before: '不好看，优化一下',
-        after: '圆对不齐；第五列后面再加一列空的圆；配色沿用现在的',
-        why: '「美观/铺满/明显」这类词出现十几次，只有少数自带可数判据。',
-      },
-      {
-        title: '闸门句最容易被越权',
-        before: '先别打包，我们先看看',
-        after: '别打包 APK，只给我网页预览',
-        why: '你喊停过几次；单起一句「先别 X」比夹在长句里更容易被执行。',
-      },
+    const STEPS = [
+      { n: '01', t: '采集', d: '读 ~/.dsh/sessions 里的会话日志，只留他亲手打的句子；系统注入、QQ 网关注入全部剔掉。' },
+      { n: '02', t: '分析', d: '按长度、指代、返工、闸门、情绪、验收六类统计，再按项目分组看哪类项目最费话。' },
+      { n: '03', t: '改写', d: '把结论翻成「我该怎么理解你」的约定，写进 ~/.agents/AGENTS.md 的托管块——我每次回话前都会先读它。' },
     ];
+
 
     function Stat(props) {
       return h('div', { style: C.card },
@@ -175,13 +171,22 @@ window.__ModuleLoader__.load({
                   `${g.label} · ${s.bucket[g.key] || 0}`)))),
 
             h('div', { style: C.section },
-              h('div', { style: C.h2 }, '三件反复发生的事，和更省事的说法'),
-              ...buildPairs(s).map((p, i) => h('div', { key: i, style: C.section },
-                h('div', { style: { fontSize: 12.5, fontWeight: 600, color: '#3c5c65' } }, p.title),
-                h('div', { style: C.pair },
-                  h('div', { style: C.before }, h('span', { style: C.tag }, '你原话'), p.before),
-                  h('div', { style: C.after }, h('span', { style: C.tag }, '我更好执行'), p.after)),
-                h('div', { style: { fontSize: 11.5, color: '#7b979e' } }, p.why)))),
+              h('div', { style: C.h2 }, '这个插件在干什么'),
+              h('div', { style: C.steps }, STEPS.map((st) => h('div', { key: st.n, style: C.step },
+                h('div', { style: C.stepN }, st.n),
+                h('div', { style: C.stepT }, st.t),
+                h('div', { style: C.stepD }, st.d))))),
+
+            h('div', { style: C.section },
+              h('div', { style: C.h2 }, `它替你改了哪些约定（${s.fit.rules.length} 条）`),
+              h('div', { style: C.subline },
+                s.fit.lastAppliedAt
+                  ? `上次写入 ${s.fit.lastAppliedAt} · 目标 ${s.fit.target} · 共 ${s.fit.rules.length} 条；重跑：跟我说「适配一下」或 node tools/fit.mjs --apply`
+                  : `还没写入过。目标 ${s.fit.target}；跑 node tools/fit.mjs --apply 或让我调 prompt_fit。`),
+              ...s.fit.rules.map((rule, i) => h('div', { key: rule.key, style: C.rule },
+                h('div', { style: C.ruleTitle }, `${i + 1}. ${rule.title}`),
+                h('div', { style: C.ruleLine }, rule.line),
+                h('div', { style: C.ruleWhy }, `${rule.why}　例：${rule.evidence}`)))),
 
             h('div', { style: C.section },
               h('div', { style: C.h2 }, '你在哪些项目上话最多'),

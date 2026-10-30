@@ -1,6 +1,6 @@
 {
   "name": "dsh-prompt-doctor",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "提纯 · 把 DSH 会话日志里的真人提示词挖出来做体检：长度分布、指代率、返工率、闸门句，并在输入框上方常驻一张卡片。",

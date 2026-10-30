@@ -10,26 +10,26 @@ window.__ModuleLoader__.load({
 
     const SNAPSHOT = {
   "generatedAt": "2026-10-30",
-  "prompts": 206,
+  "prompts": 207,
   "projects": 22,
   "files": 41,
   "median": 32,
   "p90": 106,
   "longest": 2470,
-  "chars": 19126,
+  "chars": 19211,
   "rates": {
-    "reference": 32,
-    "rework": 13.1,
+    "reference": 32.4,
+    "rework": 13,
     "gate": 15.5,
-    "emotion": 30.1,
-    "accept": 13.6,
-    "tiny": 25.2,
+    "emotion": 30.4,
+    "accept": 13.5,
+    "tiny": 25.1,
     "long": 5.8
   },
   "bucket": {
     "tiny": 52,
     "short": 73,
-    "mid": 69,
+    "mid": 70,
     "long": 12
   },
   "topProjects": [
@@ -62,10 +62,67 @@ window.__ModuleLoader__.load({
       "n": 9
     },
     {
-      "name": "G:\\all workspace\\接入QQ",
-      "n": 8
+      "name": "G:\\提纯",
+      "n": 9
     }
-  ]
+  ],
+  "fit": {
+    "target": "C:\\Users\\wst21\\.agents\\AGENTS.md",
+    "changed": false,
+    "rules": [
+      {
+        "key": "reference",
+        "title": "指代句：先定位，不猜着开工",
+        "line": "他说「这个 / 那个 / 它 / 还是 / 又」时，先在上文产物里定位对象；定位不到就列 2 个候选问一句，不要边猜边改文件。",
+        "why": "指代句占 32.4%（全库最高的一类），猜错一次就是一轮返工。",
+        "evidence": "「这个表格怎么还没铺满」← 我没查是哪张表就开始调列宽"
+      },
+      {
+        "key": "gate",
+        "title": "闸门句：手停，嘴不停",
+        "line": "出现「先别 / 暂停 / 不要 / 等等」时立刻停止动手，只回一句话确认，不改文件、不打包、不重启。",
+        "why": "闸门句占 15.5%，我历史上多次把它当语气词忽略。",
+        "evidence": "「先别打包apk，禁止打包apk！！！」← 我上一轮已经在跑构建"
+      },
+      {
+        "key": "short",
+        "title": "短句 = 改一个点，不是新需求",
+        "line": "≤15 字的指令默认按「在上一轮产物上改一个点」理解；要开新项目他会把项目名说出来。",
+        "why": "≤15 字的提示占 25.1%，中位长度只有 32 字。",
+        "evidence": "「铺满」「再大一点」都是在改刚交付的那个文件"
+      },
+      {
+        "key": "rework",
+        "title": "第二次返工：换方法，不微调",
+        "line": "同一处被否第二次时，不再微调参数，换实现层级（改结构/换控件/换数据源），并在回复里说清换了什么。",
+        "why": "返工口气占 13%；同一问题我平均要改 3 轮才换方法。",
+        "evidence": "若依列宽 15 轮：写死 885→900→1005 都是同一层级"
+      },
+      {
+        "key": "emotion",
+        "title": "带情绪时：先认账再给证据",
+        "line": "句子带「怎么还 / 服了 / 又」时，第一行认账一句（不解释），第二行给可验证的证据，第三行才说下一步。",
+        "why": "带情绪的提示占 30.4%，多出现在我宣布「已完成」之后。",
+        "evidence": "「组件可以创建出来但是为什么是空白的」← 我说过「做好了」"
+      },
+      {
+        "key": "project",
+        "title": "最费话的项目：dsh\\workspace",
+        "line": "dsh\\workspace 相关需求先给结构再写代码；涉及界面时先截一张当前效果图，改完再截一张。",
+        "why": "这个项目你打了 64 条提示，是全库最多的。",
+        "evidence": "同一项目里「完全按照我给你的图」被 9 版 SVG 重绘消耗掉"
+      },
+      {
+        "key": "accept",
+        "title": "验收词：按他的口径，不按我的",
+        "line": "说「跑起来 / 能用 / 对得上 / 有设备」时，给同口径的证据（截图、日志、adb devices 输出），不用 curl 200 代替。",
+        "why": "验收词占 13.5%，其中「能打开」被我当成「能用」的情况最多。",
+        "evidence": "「能正常打开但是都是英文」← 我用 HTTP 200 验收了内容"
+      }
+    ],
+    "lastAppliedAt": "2026-10-30 08:39",
+    "lastAdded": 1
+  }
 };
 
     const listeners = new Set();
@@ -139,6 +196,16 @@ window.__ModuleLoader__.load({
       fill: { height: '100%', borderRadius: 999, background: '#4f9de8' },
       num: { textAlign: 'right', color: '#5c7c85' },
       foot: { fontSize: 11, color: '#9db8be', borderTop: '1px solid #eaf3f5', paddingTop: 10 },
+      steps: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 },
+      step: { padding: '12px 13px', borderRadius: 12, background: '#f7fbfc', border: '1px solid #eaf3f5' },
+      stepN: { fontSize: 10.5, fontWeight: 600, color: '#8fb3bb', letterSpacing: '.08em' },
+      stepT: { fontSize: 13, fontWeight: 650, margin: '2px 0 4px' },
+      stepD: { fontSize: 11.5, color: '#5c7c85', lineHeight: 1.65 },
+      subline: { fontSize: 11.5, color: '#7b979e' },
+      rule: { padding: '11px 13px', borderRadius: 12, border: '1px solid #eaf3f5', background: '#fff', display: 'grid', gap: 4 },
+      ruleTitle: { fontSize: 12.5, fontWeight: 650, color: '#2f5b64' },
+      ruleLine: { fontSize: 12.5, color: '#17323a', lineHeight: 1.65 },
+      ruleWhy: { fontSize: 11, color: '#8aa6ad' },
     };
 
     const SEGMENTS = [
@@ -148,26 +215,12 @@ window.__ModuleLoader__.load({
       { key: 'long', label: '>200 字', color: '#57b98a' },
     ];
 
-    const buildPairs = (s) => [
-      {
-        title: '你说的「这个」我常常找不到',
-        before: '这个表格怎么还没铺满',
-        after: 'el-table 右侧要贴住窗口右边缘；窗口 1721px 时也贴住',
-        why: `指代句占 ${s.rates.reference}%，我常要回查两三轮才锁定对象。`,
-      },
-      {
-        title: '形容词没有判据，我只能猜',
-        before: '不好看，优化一下',
-        after: '圆对不齐；第五列后面再加一列空的圆；配色沿用现在的',
-        why: '「美观/铺满/明显」这类词出现十几次，只有少数自带可数判据。',
-      },
-      {
-        title: '闸门句最容易被越权',
-        before: '先别打包，我们先看看',
-        after: '别打包 APK，只给我网页预览',
-        why: '你喊停过几次；单起一句「先别 X」比夹在长句里更容易被执行。',
-      },
+    const STEPS = [
+      { n: '01', t: '采集', d: '读 ~/.dsh/sessions 里的会话日志，只留他亲手打的句子；系统注入、QQ 网关注入全部剔掉。' },
+      { n: '02', t: '分析', d: '按长度、指代、返工、闸门、情绪、验收六类统计，再按项目分组看哪类项目最费话。' },
+      { n: '03', t: '改写', d: '把结论翻成「我该怎么理解你」的约定，写进 ~/.agents/AGENTS.md 的托管块——我每次回话前都会先读它。' },
     ];
+
 
     function Stat(props) {
       return h('div', { style: C.card },
@@ -233,13 +286,22 @@ window.__ModuleLoader__.load({
                   `${g.label} · ${s.bucket[g.key] || 0}`)))),
 
             h('div', { style: C.section },
-              h('div', { style: C.h2 }, '三件反复发生的事，和更省事的说法'),
-              ...buildPairs(s).map((p, i) => h('div', { key: i, style: C.section },
-                h('div', { style: { fontSize: 12.5, fontWeight: 600, color: '#3c5c65' } }, p.title),
-                h('div', { style: C.pair },
-                  h('div', { style: C.before }, h('span', { style: C.tag }, '你原话'), p.before),
-                  h('div', { style: C.after }, h('span', { style: C.tag }, '我更好执行'), p.after)),
-                h('div', { style: { fontSize: 11.5, color: '#7b979e' } }, p.why)))),
+              h('div', { style: C.h2 }, '这个插件在干什么'),
+              h('div', { style: C.steps }, STEPS.map((st) => h('div', { key: st.n, style: C.step },
+                h('div', { style: C.stepN }, st.n),
+                h('div', { style: C.stepT }, st.t),
+                h('div', { style: C.stepD }, st.d))))),
+
+            h('div', { style: C.section },
+              h('div', { style: C.h2 }, `它替你改了哪些约定（${s.fit.rules.length} 条）`),
+              h('div', { style: C.subline },
+                s.fit.lastAppliedAt
+                  ? `上次写入 ${s.fit.lastAppliedAt} · 目标 ${s.fit.target} · 共 ${s.fit.rules.length} 条；重跑：跟我说「适配一下」或 node tools/fit.mjs --apply`
+                  : `还没写入过。目标 ${s.fit.target}；跑 node tools/fit.mjs --apply 或让我调 prompt_fit。`),
+              ...s.fit.rules.map((rule, i) => h('div', { key: rule.key, style: C.rule },
+                h('div', { style: C.ruleTitle }, `${i + 1}. ${rule.title}`),
+                h('div', { style: C.ruleLine }, rule.line),
+                h('div', { style: C.ruleWhy }, `${rule.why}　例：${rule.evidence}`)))),
 
             h('div', { style: C.section },
               h('div', { style: C.h2 }, '你在哪些项目上话最多'),

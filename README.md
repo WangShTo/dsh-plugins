@@ -126,3 +126,28 @@ New-Item -ItemType Junction -Path $link -Target 'G:\提纯\plugin'
 
 git-bash 里 `ln -s` 在这台机器上会静默退化成复制，改完代码界面不变——v0.1 到 v0.2 卡了半小时就是它。
 改成联接后，改 `client.js` → 应用里 Ctrl+R 即生效（Host 半的改动仍需重启）。
+
+## v0.3：从「体检」到「自动适配」
+
+体检只产出结论，不产生改变。v0.3 把结论变成**写进指令文件的约定**，并让页面把这些约定摊开给人看。
+
+**管线（`lib/run.mjs`，三个调用方共用同一份结果）**
+
+```
+会话日志 → audit() 统计 → deriveRules() 7 条规则 → renderBlock() → applyBlock() 写托管块
+```
+
+**写到哪里**：`~/.agents/AGENTS.md` 的 `<!-- prompt-doctor:begin --> … <!-- prompt-doctor:end -->` 之间。
+手写人格留在 `~/.dsh/AGENTS.md`，自动适配单独一层，谁写的改谁，互不覆盖；块外内容一个字节不动。
+
+**什么时候写**
+
+| 入口 | 命令 | 说明 |
+| --- | --- | --- |
+| 应用启动 | Host `apply()` | `config.autoFit !== false` 时自动跑一次，内容没变不写盘 |
+| 对话里 | agent 工具 `prompt_fit` | 说「适配一下」即可，返回新增/移除的行 |
+| 命令行 | `node tools/fit.mjs --apply` | `--dry` 只看 diff，`--undo` 整段撤掉 |
+
+**安全**：每次写盘前备份到 `~/.dsh/prompt-doctor/backup/`，`last-fit.json` 留最近一次 diff；`--undo` 只删托管块。
+
+**页面新增**：`这个插件在干什么`（采集/分析/改写三格）与 `它替你改了哪些约定`（每条规则带 why 和 evidence）。
