@@ -185,7 +185,7 @@ window.__ModuleLoader__.load({
           ctx.inject(['commandUi'], (scope) => {
             const commands = scope.get('commandUi');
             scope.effect(() => commands.register({
-              name: '体检',
+              name: 'tijian',
               label: () => '提问体检',
               available: () => true,
               ui: { kind: 'action', run: () => setOpen(true) },
