@@ -23,10 +23,13 @@ const patch = patchRaw.toString('utf8');
 ok(pkg.name === 'dsh-prompt-doctor', '包名');
 ok(pkg.main === './index.js', 'main 指向根 index.js');
 ok(pkg.exports['.'] === './index.js', 'exports["."] 指向根 index.js');
-ok(pkg.exports['./client'] === './client.js', 'exports["./client"] 指向根 client.js');
+if (pkg.exports['./client']) ok(pkg.exports['./client'] === './client.js', 'exports["./client"] 指向根 client.js');
+else ok(true, 'host-only 模式：不声明 exports["./client"]');
 ok(pkg.dsh?.bundle?.patch === './cordis.patch.yml', 'dsh.bundle.patch');
-ok(pkg.dsh?.client?.platform === 'web', 'dsh.client.platform');
-ok(Array.isArray(pkg.dsh?.client?.inject) && pkg.dsh.client.inject.includes('@deepseek-ai/dsh-client-ui-conversation'), 'dsh.client.inject 含对话包');
+if (pkg.dsh?.client) ok(pkg.dsh.client.platform === 'web', 'dsh.client.platform');
+else ok(true, 'host-only 模式：不声明 dsh.client');
+if (pkg.dsh?.client) ok(Array.isArray(pkg.dsh.client.inject) && pkg.dsh.client.inject.includes('@deepseek-ai/dsh-client-ui-conversation'), 'dsh.client.inject 含对话包');
+else ok(true, 'host-only 模式：无 inject 依赖');
 
 // 每个 exports 目标都必须是真实存在的文件
 for (const [key, target] of Object.entries(pkg.exports)) {

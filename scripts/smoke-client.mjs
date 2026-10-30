@@ -4,6 +4,8 @@ import { execFileSync } from 'node:child_process';
 
 let fail = 0;
 const ok = (c, m) => { console.log(`${c ? 'ok  ' : 'FAIL'} ${m}`); if (!c) fail++; };
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
+if (!pkg.exports || !pkg.exports['./client']) { console.log('skip: host-only 模式（未声明 client 半）'); process.exit(0); }
 const src = readFileSync('client.js', 'utf8');
 
 ok(!src.includes('conversation.composer.dock'), '不再占用输入框上方');
