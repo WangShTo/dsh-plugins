@@ -11,7 +11,7 @@ import { audit, decodeDirName } from '../lib/audit.mjs';
 import { runFit, readLastFit, defaultTarget } from '../lib/run.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const out = path.join(here, '..', 'client.js');
+const out = path.join(here, '..', 'client/client.js');
 const r = audit({ limitProjects: 8 });
 if (!r.ok) throw new Error(r.reason);
 

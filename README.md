@@ -151,3 +151,28 @@ git-bash 里 `ln -s` 在这台机器上会静默退化成复制，改完代码�
 **安全**：每次写盘前备份到 `~/.dsh/prompt-doctor/backup/`，`last-fit.json` 留最近一次 diff；`--undo` 只删托管块。
 
 **页面新增**：`这个插件在干什么`（采集/分析/改写三格）与 `它替你改了哪些约定`（每条规则带 why 和 evidence）。
+
+## v0.4：按生态惯例重排工程结构
+
+参考生态里已发布的两个同类插件（[`dsh-prompt-lint`](https://github.com/LIN-F1SH/dsh-prompt-lint) 的 `lib/` + `client/` + `scripts/smoke-*` 布局、`dsh-prompt-enhancer` 的清单字段），把工程结构对齐，逻辑没动：
+
+```
+lib/index.js        Host 入口（apply / 工具注册 / 启动自动适配）
+lib/audit.mjs       解码 + 统计
+lib/incidents.mjs   翻车事件配对与聚类（v0.4 新增）
+lib/fit.mjs         数字 → 规则
+lib/agents.mjs      托管块读写（备份 / 幂等 / 撤销）
+lib/run.mjs         一条龙编排
+client/client.js    页面（由 tools/report.view.js 生成）
+scripts/smoke-*.mjs 五个分层冒烟测试
+docs/ARCHITECTURE.md 数据流、层的职责、不变量
+screenshots.json    截图清单（给市场和 README 用）
+```
+
+**工程化的三件实事**
+
+1. **分层冒烟测试**：`npm run smoke` 跑 5 组，覆盖多帧解码、翻车配对、脱敏、托管块幂等与撤销、client 不越界、安装契约。全部不依赖测试框架，`node >= 22.15` 直接跑。
+2. **单一写盘入口**：只有 `agents.applyBlock()` 能写 AGENTS.md，它自己负责备份、幂等、只动块内。
+3. **不变量写进文档**：`docs/ARCHITECTURE.md` 把「lib 不许联网、规则不许带原文、页面不许占输入框」写成硬规矩，改代码前先看。
+
+**没有借的部分**：它们的核心是「输入时改写这一句」，本插件的核心是「把 200 句的历史沉淀成一段持久约定」。槽位不冲突，可以同时装。

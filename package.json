@@ -1,23 +1,65 @@
 {
   "name": "dsh-prompt-doctor",
-  "version": "0.3.0",
-  "private": true,
+  "version": "0.4.0",
   "type": "module",
-  "description": "提纯 · 把 DSH 会话日志里的真人提示词挖出来做体检：长度分布、指代率、返工率、闸门句，并在输入框上方常驻一张卡片。",
+  "description": "提纯 · 读 DSH 会话日志里真人打过的字，做体检（长度/指代/返工/闸门/情绪/验收），再把结论写成 agent 的约定（AGENTS.md 托管块）；页面可随时唤出。",
   "exports": {
-    ".": "./index.js",
-    "./client": "./client.js",
+    ".": "./lib/index.js",
+    "./client": "./client/client.js",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
-  "files": ["index.js", "client.js", "lib", "tools", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md"],
+  "files": [
+    "lib",
+    "client",
+    "scripts",
+    "docs",
+    "tools",
+    "locale",
+    "shot",
+    "icon.svg",
+    "cordis.patch.yml",
+    "screenshots.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
     "client": {
       "platform": "web",
       "immediately": true,
-      "inject": ["@deepseek-ai/dsh-client-ui-conversation"]
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation"
+      ]
     }
   },
-  "license": "MIT"
+  "license": "MIT",
+  "main": "./lib/index.js",
+  "engines": {
+    "node": ">=22.15"
+  },
+  "scripts": {
+    "smoke": "node scripts/smoke-sessions.mjs && node scripts/smoke-incidents.mjs && node scripts/smoke-fit.mjs && node scripts/smoke-client.mjs && node scripts/smoke-profile.mjs",
+    "smoke:sessions": "node scripts/smoke-sessions.mjs",
+    "smoke:incidents": "node scripts/smoke-incidents.mjs",
+    "smoke:fit": "node scripts/smoke-fit.mjs",
+    "smoke:client": "node scripts/smoke-client.mjs",
+    "smoke:profile": "node scripts/smoke-profile.mjs",
+    "report": "node tools/report.mjs",
+    "incidents": "node tools/incidents.mjs --all",
+    "fit": "node tools/fit.mjs --apply"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "prompt",
+    "prompt-engineering",
+    "session-log",
+    "agents-md",
+    "self-improving"
+  ]
 }

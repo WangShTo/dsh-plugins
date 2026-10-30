@@ -90,7 +90,7 @@ let mod = null;
 window.__ModuleLoader__ = { load: ({ id, factory }) => { mod = factory((n) => { if (n === 'react') return React; throw new Error('no module ' + n); }); } };
 </script>
 
-<script src="../client.js"></script>
+<script src="../client/client.js"></script>
 
 <script>
   let PageComp = null;
