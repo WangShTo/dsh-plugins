@@ -29,3 +29,34 @@
 - 首个版本：多帧 zstd 解码（`28 b5 2f fd` 逐帧）、会话目录名解码（`~HEX4`）、真人提示过滤（剔除系统注入与 QQ 网关注入）。
 - 六类统计：长度分布、指代、返工、闸门、情绪、验收词；按项目分组。
 - Host 工具 `prompt_audit`；对话页卡片（后被 v0.2 移除）。
+
+## v0.4.1 — 2026-10-30（事故修复版）
+
+这一版不是加功能，是补两个把 DSH 搞挂的坑。
+
+### 事故 1：入口挪进子目录 → web boot 失败
+
+`exports["./client"]` 指到 `./client/client.js`、`main` 指到 `./lib/index.js` 之后，宿主启动报：
+
+```
+Error: web boot: 12 entries did not activate
+@deepseek-ai/dsh-client-ui-conversation: failed
+其余 11 个 pending (waiting for service: uiConversation)
+```
+
+界面白屏、打不开。**改回与 `templates/decoration` 一致的根级布局**：`index.js`、`client.js` 都在包根，`exports["."]`/`exports["./client"]` 指向它们；`lib/` 只放内部实现，由根 `index.js` 再导出。
+
+### 事故 2：用 PowerShell 写 profile 清单 → 带 BOM → 宿主 fatal
+
+```
+DesktopHostFatalError: Unexpected token '\ufeff', "\ufeff{\n    \"n\"..." is not valid JSON
+    at readProfileManifest (dsh-app-boot/lib/index.js:913)
+```
+
+Profile 的 `package.json` 不能有 BOM。**所有 profile 写盘改走 `tools/profile.mjs`（node，无 BOM）**，写完立刻按宿主的方式回读校验。
+
+### 新增防线
+
+- `tools/profile.mjs status|verify|install|uninstall`：备份 → 改写 → 回读校验；`verify` 检查 BOM、JSON 可解析、exports 目标存在、包名、patch 行。
+- `scripts/smoke-profile.mjs` 加严：BOM、JSON、每个 exports 目标是否存在、`files` 项存在、根入口能否 `import` 出 `apply`。
+- `fit-install.bat` / `fit-rollback.bat`：双击安装 / 双击回滚（不依赖我）。

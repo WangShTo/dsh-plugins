@@ -1,28 +1,24 @@
 {
   "name": "dsh-prompt-doctor",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "type": "module",
   "description": "提纯 · 读 DSH 会话日志里真人打过的字，做体检（长度/指代/返工/闸门/情绪/验收），再把结论写成 agent 的约定（AGENTS.md 托管块）；页面可随时唤出。",
   "exports": {
-    ".": "./lib/index.js",
-    "./client": "./client/client.js",
+    ".": "./index.js",
+    "./client": "./client.js",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg"
   },
   "files": [
-    "lib",
-    "client",
-    "scripts",
-    "docs",
-    "tools",
-    "locale",
-    "shot",
-    "icon.svg",
+    "index.js",
+    "client.js",
     "cordis.patch.yml",
-    "screenshots.json",
+    "lib/*.mjs",
+    "locale/*.json",
+    "icon.svg",
     "README.md",
-    "CHANGELOG.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/*.md"
   ],
   "dsh": {
     "bundle": {
@@ -37,7 +33,7 @@
     }
   },
   "license": "MIT",
-  "main": "./lib/index.js",
+  "main": "./index.js",
   "engines": {
     "node": ">=22.15"
   },
