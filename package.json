@@ -1,6 +1,6 @@
 {
   "name": "dsh-prompt-doctor",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "type": "module",
   "description": "提纯 · 读 DSH 会话日志里真人打过的字，做体检（长度/指代/返工/闸门/情绪/验收），再把结论写成 agent 的约定（AGENTS.md 托管块）；页面可随时唤出。",
   "exports": {

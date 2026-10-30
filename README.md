@@ -183,3 +183,20 @@ screenshots.json    截图清单（给市场和 README 用）
 - 新增第 8 条「最常翻车的地方」：某一类翻车 ≥3 次才写进约定。
 - `node tools/trend.mjs` 按自然周给返工率，并用托管块写入时间切「用前/用后」；样本不足 20 条时直接说不足，不给结论。
 - 每次写入追加 `~/.dsh/prompt-doctor/fits.jsonl`，趋势的分界取最早一次写入。
+
+## 崩溃自愈守卫（v0.5.2）
+
+DSH 启动失败时会把 profile 的 bundles 从 21 个缩到 2 个，越重启越残。守卫做一件事：开机时启动应用，30 秒后若出现新的 `did not activate` 崩溃日志，就把 profile 还原成「上次能开的样子」再启动一次，然后退出。
+
+```powershell
+# 安装（免管理员，写入「启动」文件夹；出现在 设置 → 应用 → 启动）
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\install-guard.ps1
+
+# 卸载
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\install-guard.ps1 -Uninstall
+```
+
+- 成本：登录时跑一次，约 30 秒后退出，**无常驻进程**（实测 22:03:11 → 22:03:41）；脚本 ~6 KB。
+- 落点：`%LOCALAPPDATA%\dsh-guard\{crash-guard.ps1,start.cmd,good\,guard.log}` + 启动文件夹里一个 250 字节的 `.vbs`。
+- 保护对象：`package.json` 与 `cordis.patch.yml`（写坏过两次的正是这两个文件：一次 BOM，一次被降级）。
+- 为什么放在 DSH 外面：DSH 起不来的时候，DSH 里的设置页也用不了；放在 Windows 启动项才救得回来。

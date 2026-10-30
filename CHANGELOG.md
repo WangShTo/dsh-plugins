@@ -77,3 +77,9 @@ Profile 的 `package.json` 不能有 BOM。**所有 profile 写盘改走 `tools/
 - `tools/profile.mjs status|verify|install|uninstall`：备份 → 改写 → 回读校验；`verify` 检查 BOM、JSON 可解析、exports 目标存在、包名、patch 行。
 - `scripts/smoke-profile.mjs` 加严：BOM、JSON、每个 exports 目标是否存在、`files` 项存在、根入口能否 `import` 出 `apply`。
 - `fit-install.bat` / `fit-rollback.bat`：双击安装 / 双击回滚（不依赖我）。
+
+## v0.5.2 — 2026-10-30
+
+- 新增 `tools/crash-guard.ps1` 与 `tools/install-guard.ps1`：开机自检 + 失败自动还原 profile 的守卫，无常驻进程。
+- 启动方式用「启动文件夹 + 隐藏 VBS」而不是计划任务（`schtasks /SC ONLOGON` 需要管理员，实测 Access denied）。
+- 同时把插件降为 host-only（v0.5.1），客户端半身待隔离验证后再放回。
