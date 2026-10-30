@@ -113,3 +113,16 @@ MIT
 ### 为什么页面要自己解释自己
 
 上一版卡片只有数字，没有一句话说明「这些数字是什么、拿来干嘛」，收到了明确的否决意见。新版的每一块都带一句人话标题，并给出可执行的改法。
+
+### 安装时必须用目录联接（junction）
+
+`~/.dsh/profiles/desktop/node_modules/dsh-prompt-doctor` 必须是**联接**指向本仓库，否则运行的是安装那一刻的快照：
+
+```powershell
+$link = Join-Path $env:USERPROFILE '.dsh\profiles\desktop\node_modules\dsh-prompt-doctor'
+if (Test-Path $link) { Remove-Item -Recurse -Force $link }
+New-Item -ItemType Junction -Path $link -Target 'G:\提纯\plugin'
+```
+
+git-bash 里 `ln -s` 在这台机器上会静默退化成复制，改完代码界面不变——v0.1 到 v0.2 卡了半小时就是它。
+改成联接后，改 `client.js` → 应用里 Ctrl+R 即生效（Host 半的改动仍需重启）。
