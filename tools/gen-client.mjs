@@ -27,6 +27,6 @@ const snap = {
   topProjects: r.topProjects.map((p) => ({ name: decodeDirName(p.dir), n: p.n })),
 };
 
-const template = fs.readFileSync(path.join(here, 'page.template.js'), 'utf8');
+const template = fs.readFileSync(path.join(here, 'report.view.js'), 'utf8');
 fs.writeFileSync(out, template.replace('/*__SNAPSHOT__*/', JSON.stringify(snap, null, 2)));
 console.log('client.js written:', out, 'prompts=', snap.prompts, 'projects=', snap.projects);

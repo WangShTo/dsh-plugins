@@ -1,8 +1,7 @@
 // 提纯 · 提问体检（Client 半）。
 //
-// 形态：不占输入框位置。注册一条斜杠命令「体检」，输入 / 选中它 →
-// 弹出一整页体检报告；Esc 或点背景关闭。
-// 数据由 tools/gen-client.mjs 烘进 SNAPSHOT（Client 半读不了文件系统）。
+// 形态：对话页里不出现任何东西。顶部栏一个「提问体检」按钮（或 /tijian）打开整页报告，
+// Esc / 点背景关闭。数据由 tools/gen-client.mjs 烘进 SNAPSHOT（Client 半读不了文件系统）。
 window.__ModuleLoader__.load({
   id: 'dsh-prompt-doctor',
   factory(require) {
@@ -11,26 +10,26 @@ window.__ModuleLoader__.load({
 
     const SNAPSHOT = {
   "generatedAt": "2026-10-30",
-  "prompts": 204,
+  "prompts": 206,
   "projects": 22,
   "files": 41,
-  "median": 31,
-  "p90": 105,
+  "median": 32,
+  "p90": 106,
   "longest": 2470,
-  "chars": 18973,
+  "chars": 19126,
   "rates": {
-    "reference": 31.4,
-    "rework": 12.7,
-    "gate": 14.7,
-    "emotion": 30.4,
-    "accept": 13.7,
-    "tiny": 25.5,
-    "long": 5.9
+    "reference": 32,
+    "rework": 13.1,
+    "gate": 15.5,
+    "emotion": 30.1,
+    "accept": 13.6,
+    "tiny": 25.2,
+    "long": 5.8
   },
   "bucket": {
     "tiny": 52,
     "short": 73,
-    "mid": 67,
+    "mid": 69,
     "long": 12
   },
   "topProjects": [
@@ -69,9 +68,9 @@ window.__ModuleLoader__.load({
   ]
 };
 
-    // —— 跨组件的小开关：命令 run() 里打开，页面里关闭 ——
     const listeners = new Set();
-    let isOpen = false;
+    // 静态预览用：preview.html?open=1 时默认展开，真实 DSH 地址里不带这个参数。
+    let isOpen = /(^|[?&])open=1/.test(String(window.location && window.location.search || ''));
     function setOpen(v) {
       if (isOpen === v) return;
       isOpen = v;
@@ -88,55 +87,57 @@ window.__ModuleLoader__.load({
     }
 
     const C = {
+      badge: { fontSize: 11, padding: '3px 8px', borderRadius: 999, background: '#e8f4f6', color: '#2f7f7f', marginTop: 2 },
+      trigger: {
+        display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer',
+        padding: '3px 9px', borderRadius: 8, fontSize: 12,
+        border: '1px solid color-mix(in oklab, currentColor 16%, transparent)',
+        background: 'color-mix(in oklab, currentColor 4%, transparent)',
+        color: 'inherit', opacity: 0.86, whiteSpace: 'nowrap',
+      },
       backdrop: {
-        position: 'fixed', inset: 0, zIndex: 60,
-        background: 'rgba(16, 42, 50, .38)', backdropFilter: 'blur(2px)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        position: 'fixed', inset: 0, zIndex: 70, padding: 24,
+        background: 'rgba(14, 38, 46, .40)', backdropFilter: 'blur(3px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       },
       panel: {
-        width: 'min(920px, 100%)', maxHeight: '82vh', overflow: 'auto',
-        background: '#ffffff', color: '#17323a',
-        borderRadius: 18, border: '1px solid #dbe9ec',
-        boxShadow: '0 24px 70px rgba(12, 46, 56, .28)',
+        width: 'min(940px, 100%)', maxHeight: '84vh', overflow: 'auto',
+        background: '#fff', color: '#17323a', borderRadius: 18,
+        border: '1px solid #dbe9ec', boxShadow: '0 26px 74px rgba(12, 46, 56, .3)',
         font: '13px/1.6 "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif',
         fontVariantNumeric: 'tabular-nums',
       },
       head: {
-        position: 'sticky', top: 0, zIndex: 2,
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '16px 22px 14px', borderBottom: '1px solid #eaf3f5',
-        background: 'linear-gradient(#ffffff, rgba(255,255,255,.92))',
+        position: 'sticky', top: 0, zIndex: 2, display: 'flex', alignItems: 'flex-start', gap: 12,
+        padding: '18px 24px 15px', borderBottom: '1px solid #eaf3f5', background: '#fff',
       },
-      badge: {
-        fontSize: 11, padding: '2px 8px', borderRadius: 999,
-        background: '#e8f4f6', color: '#2f7f7f', letterSpacing: '.04em',
-      },
-      h1: { fontSize: 15.5, fontWeight: 650, letterSpacing: '.01em' },
-      sub: { fontSize: 11.5, color: '#7b979e' },
+      h1: { fontSize: 16, fontWeight: 650 },
+      lead: { fontSize: 12, color: '#6f8d95', marginTop: 3, maxWidth: 640 },
       close: {
-        marginLeft: 'auto', cursor: 'pointer', border: '1px solid #dbe9ec',
-        background: '#f7fbfc', borderRadius: 9, padding: '4px 10px',
-        fontSize: 12, color: '#4d6f78',
+        marginLeft: 'auto', cursor: 'pointer', border: '1px solid #dbe9ec', background: '#f7fbfc',
+        borderRadius: 9, padding: '5px 11px', fontSize: 12, color: '#4d6f78',
       },
-      body: { padding: '18px 22px 22px', display: 'grid', gap: 18 },
+      body: { padding: '18px 24px 24px', display: 'grid', gap: 20 },
       cards: { display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 10 },
       card: { padding: '11px 12px', borderRadius: 12, background: '#f7fbfc', border: '1px solid #eaf3f5' },
       big: { fontSize: 21, fontWeight: 660, lineHeight: 1.15 },
       unit: { fontSize: 11, fontWeight: 400, color: '#7b979e', marginLeft: 2 },
       cap: { fontSize: 11, color: '#7b979e', marginTop: 3 },
-      section: { display: 'grid', gap: 8 },
+      section: { display: 'grid', gap: 9 },
       h2: { fontSize: 12.5, fontWeight: 620, color: '#3c5c65', letterSpacing: '.02em' },
+      note: { fontSize: 12, color: '#5c7c85', background: '#f7fbfc', border: '1px solid #eaf3f5', borderRadius: 11, padding: '10px 13px' },
       bar: { display: 'flex', height: 9, borderRadius: 999, overflow: 'hidden', border: '1px solid #e6f0f2' },
       legend: { display: 'flex', gap: 14, fontSize: 11.5, color: '#7b979e', flexWrap: 'wrap' },
       dot: { width: 8, height: 8, borderRadius: 3, display: 'inline-block', marginRight: 5 },
+      pair: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 },
+      before: { padding: '9px 12px', borderRadius: 10, background: '#fdf1ec', border: '1px solid #f6ded4', fontSize: 12.5 },
+      after: { padding: '9px 12px', borderRadius: 10, background: '#eef8f1', border: '1px solid #d6ecdd', fontSize: 12.5 },
+      tag: { fontSize: 10.5, letterSpacing: '.04em', opacity: 0.62, display: 'block', marginBottom: 3 },
       rows: { display: 'grid', gap: 5 },
       row: { display: 'grid', gridTemplateColumns: '190px 1fr 56px', alignItems: 'center', gap: 10, fontSize: 12 },
       track: { height: 7, borderRadius: 999, background: '#eef5f7', overflow: 'hidden' },
       fill: { height: '100%', borderRadius: 999, background: '#4f9de8' },
       num: { textAlign: 'right', color: '#5c7c85' },
-      tips: { display: 'grid', gap: 7, fontSize: 12.5, color: '#3c5c65' },
-      tip: { display: 'grid', gridTemplateColumns: '18px 1fr', gap: 8, alignItems: 'start' },
-      idx: { color: '#9db8be', fontWeight: 600 },
       foot: { fontSize: 11, color: '#9db8be', borderTop: '1px solid #eaf3f5', paddingTop: 10 },
     };
 
@@ -147,17 +148,39 @@ window.__ModuleLoader__.load({
       { key: 'long', label: '>200 字', color: '#57b98a' },
     ];
 
-    const TIPS = [
-      '短句没问题，问题是唯一指向：「这个/那个」后面补半句名词，我就不用回查三轮。',
-      '形容词给判据：把「铺满」说成「表格右边缘贴住窗口右边缘，窗口 1721px 时也贴住」。',
-      '一次只下一条闸门：「先别打包」比「先别动，我们讨论一下」更容易被我执行。',
-      '验收物先说：跑起来／截图对得上／adb 有设备，任选其一作为完成条件。',
+    const buildPairs = (s) => [
+      {
+        title: '你说的「这个」我常常找不到',
+        before: '这个表格怎么还没铺满',
+        after: 'el-table 右侧要贴住窗口右边缘；窗口 1721px 时也贴住',
+        why: `指代句占 ${s.rates.reference}%，我常要回查两三轮才锁定对象。`,
+      },
+      {
+        title: '形容词没有判据，我只能猜',
+        before: '不好看，优化一下',
+        after: '圆对不齐；第五列后面再加一列空的圆；配色沿用现在的',
+        why: '「美观/铺满/明显」这类词出现十几次，只有少数自带可数判据。',
+      },
+      {
+        title: '闸门句最容易被越权',
+        before: '先别打包，我们先看看',
+        after: '别打包 APK，只给我网页预览',
+        why: '你喊停过几次；单起一句「先别 X」比夹在长句里更容易被执行。',
+      },
     ];
 
     function Stat(props) {
       return h('div', { style: C.card },
         h('div', { style: C.big }, props.value, h('span', { style: C.unit }, props.unit || '')),
         h('div', { style: C.cap }, props.label));
+    }
+
+    function Trigger() {
+      return h('button', {
+        style: C.trigger,
+        title: '把你在 DSH 里打给我的话做一次体检',
+        onClick: () => setOpen(true),
+      }, '提问体检');
     }
 
     function Page() {
@@ -179,18 +202,22 @@ window.__ModuleLoader__.load({
           h('div', { style: C.head },
             h('span', { style: C.badge }, '提纯'),
             h('div', null,
-              h('div', { style: C.h1 }, '我的提问体检'),
-              h('div', { style: C.sub }, `${s.prompts} 条真人提示 · ${s.projects} 个项目 · ${s.files} 份会话日志 · 快照 ${s.generatedAt}`)),
+              h('div', { style: C.h1 }, '提问体检'),
+              h('div', { style: C.lead },
+                `把你在 DSH 里亲手打过的 ${s.prompts} 句话挖出来做体检——不是聊天记录，是「我到底有没有听懂你」的证据。`)),
             h('button', { style: C.close, onClick: () => setOpen(false) }, 'Esc 关闭')),
 
           h('div', { style: C.body },
+            h('div', { style: C.note },
+              `数据来源：${s.files} 份会话日志（~/.dsh/sessions）里的 ${s.prompts} 条真人提示，已剔除系统注入与 QQ 网关注入；覆盖 ${s.projects} 个项目，合计 ${s.chars} 字。数字是 ${s.generatedAt} 的快照，重跑 node tools/gen-client.mjs 更新。`),
+
             h('div', { style: C.cards },
-              h(Stat, { value: s.median, unit: '字', label: '中位长度' }),
+              h(Stat, { value: s.median, unit: '字', label: '你说的中位长度' }),
               h(Stat, { value: s.p90, unit: '字', label: 'p90 长度' }),
               h(Stat, { value: s.longest, unit: '字', label: '最长一条' }),
-              h(Stat, { value: s.rates.reference, unit: '%', label: '带指代' }),
-              h(Stat, { value: s.rates.rework, unit: '%', label: '返工标记' }),
-              h(Stat, { value: s.rates.gate, unit: '%', label: '闸门句' })),
+              h(Stat, { value: s.rates.reference, unit: '%', label: '含指代' }),
+              h(Stat, { value: s.rates.rework, unit: '%', label: '返工口气' }),
+              h(Stat, { value: s.rates.gate, unit: '%', label: '含闸门句' })),
 
             h('div', { style: C.section },
               h('div', { style: C.h2 }, '长度分布'),
@@ -206,39 +233,41 @@ window.__ModuleLoader__.load({
                   `${g.label} · ${s.bucket[g.key] || 0}`)))),
 
             h('div', { style: C.section },
-              h('div', { style: C.h2 }, '提示词最多的项目'),
-              h('div', { style: C.rows }, s.topProjects.map((p) =>
+              h('div', { style: C.h2 }, '三件反复发生的事，和更省事的说法'),
+              ...buildPairs(s).map((p, i) => h('div', { key: i, style: C.section },
+                h('div', { style: { fontSize: 12.5, fontWeight: 600, color: '#3c5c65' } }, p.title),
+                h('div', { style: C.pair },
+                  h('div', { style: C.before }, h('span', { style: C.tag }, '你原话'), p.before),
+                  h('div', { style: C.after }, h('span', { style: C.tag }, '我更好执行'), p.after)),
+                h('div', { style: { fontSize: 11.5, color: '#7b979e' } }, p.why)))),
+
+            h('div', { style: C.section },
+              h('div', { style: C.h2 }, '你在哪些项目上话最多'),
+              h('div', { style: C.rows }, s.topProjects.slice(0, 6).map((p) =>
                 h('div', { key: p.name, style: C.row },
                   h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: p.name }, p.name),
                   h('div', { style: C.track }, h('div', { style: { ...C.fill, width: `${(p.n / maxProject) * 100}%` } })),
                   h('span', { style: C.num }, p.n + ' 条'))))),
 
-            h('div', { style: C.section },
-              h('div', { style: C.h2 }, '拿到我这里的四条建议'),
-              h('div', { style: C.tips }, TIPS.map((t, i) =>
-                h('div', { key: i, style: C.tip },
-                  h('span', { style: C.idx }, String(i + 1)),
-                  h('span', null, t))))),
-
             h('div', { style: C.foot },
               `情绪句 ${s.rates.emotion}% · 验收词 ${s.rates.accept}% · 极短(≤15字) ${s.rates.tiny}% · 长(>200字) ${s.rates.long}%`,
               h('br'),
-              '口径见仓库 README；数字是快照，重跑 node tools/gen-client.mjs 更新。'))));
+              '口径与自测脚本见仓库 README；这是快照，不是实时统计。'))));
     }
 
     return {
       inject: ['slots'],
       apply(ctx) {
-        // 页面挂帧级 overlay：不进输入框布局，命令打开、Esc 关闭。
-        try {
-          ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-            name: 'shell.overlay', id: 'prompt-doctor-page', order: 30,
-          }, Page));
-        } catch (error) {
-          console.warn('[prompt-doctor] overlay slot unavailable:', error && error.message);
+        for (const slot of ['conversation.header', 'conversation.header.leading']) {
+          try {
+            ctx.slots.inject(slot, () => ctx.slots.register({
+              name: slot, id: 'prompt-doctor-open', order: 40,
+            }, Trigger));
+          } catch (error) {
+            console.warn('[prompt-doctor] header slot unavailable:', slot, error && error.message);
+          }
         }
 
-        // 斜杠命令：输入 / 就能看到「提问体检」。
         try {
           ctx.inject(['commandUi'], (scope) => {
             const commands = scope.get('commandUi');
@@ -251,6 +280,14 @@ window.__ModuleLoader__.load({
           });
         } catch (error) {
           console.warn('[prompt-doctor] command unavailable:', error && error.message);
+        }
+
+        try {
+          ctx.slots.inject('shell.overlay', () => ctx.slots.register({
+            name: 'shell.overlay', id: 'prompt-doctor-page', order: 30,
+          }, Page));
+        } catch (error) {
+          console.warn('[prompt-doctor] overlay slot unavailable:', error && error.message);
         }
       },
     };

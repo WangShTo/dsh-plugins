@@ -97,7 +97,7 @@ window.__ModuleLoader__ = { load: ({ id, factory }) => { mod = factory((n) => { 
   let command = null;
   const ctx = {
     slots: {
-      inject(name, register) { const r = register(); if (r && r.Comp) PageComp = r.Comp; },
+      inject(name, register) { const r = register(); if (name === 'shell.overlay' && r && r.Comp) PageComp = r.Comp; },
       register(meta, Comp) { return { meta, Comp }; },
     },
     inject(deps, fn) {

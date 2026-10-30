@@ -102,3 +102,14 @@ node tools/gen-client.mjs && git diff client.js
 ## 许可
 
 MIT
+
+## v0.2 变更（2026-10-30）
+
+- **对话页里不再有任何 UI**：删掉了 `conversation.composer.dock` 的卡片。
+- **入口在顶部**：对话标题栏右侧一个「提问体检」按钮（`conversation.header`），另有斜杠命令 `/tijian`。
+- **整页展示**：`shell.overlay` 全屏层，Esc 或点背景关闭；页面开头先说明数据来源与口径，再给三组「你原话 → 我更好执行」的对照，最后是项目分布。
+- 预览图：`shot/page-preview.png`（由 `tools/preview.html` 渲染，非截图伪造）。
+
+### 为什么页面要自己解释自己
+
+上一版卡片只有数字，没有一句话说明「这些数字是什么、拿来干嘛」，收到了明确的否决意见。新版的每一块都带一句人话标题，并给出可执行的改法。
