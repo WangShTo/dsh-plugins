@@ -2,44 +2,60 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>提纯 · 卡片预览</title>
+<title>提纯 · 体检页面预览</title>
 <style>
-  :root { color-scheme: light; }
+  html, body { margin: 0; height: 100%; }
   body {
-    margin: 0; min-height: 100vh; display: grid; place-items: center;
-    background: #eef6f7; color: #17323a;
-    font: 13px/1.5 "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
+    background: #eaf3f4; color: #17323a;
+    font: 13px/1.6 "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
   }
-  #stage { width: 820px; padding: 22px 24px; border-radius: 18px; background: #ffffff;
-           box-shadow: 0 10px 34px rgba(20, 60, 70, .13); }
-  .caption { margin-top: 10px; font-size: 11.5px; color: #6d8b93; letter-spacing: .01em; }
-  .composer { margin-top: 12px; height: 52px; border-radius: 14px; border: 1px solid #d7e6e9;
-              background: #f7fbfc; display: flex; align-items: center; padding: 0 14px; color: #9ab2b8; }
+  /* 只给抽屉外面一点“应用背景”的暗示，页面本身由 client.js 画 */
+  #bg { position: fixed; inset: 0; background:
+        radial-gradient(900px 420px at 18% 0%, #dcecef 0%, transparent 60%),
+        linear-gradient(#eef6f7, #e6f1f2); }
+  #root { position: relative; }
 </style>
 </head>
 <body>
-  <div id="stage">
-    <div id="slot"></div>
-    <div class="composer">发消息或创建任务，/ 调用指令，@ 文件或对话</div>
-    <div class="caption">同一份 client.js · 桩 React 渲染（真实挂载点在输入框上方，重启 DSH 后生效）</div>
-  </div>
+  <div id="bg"></div>
+  <div id="root"></div>
 
 <script>
-// —— 迷你 React：只实现 createElement 与同步渲染，卡片不用 hooks ——
+// —— 迷你 React：createElement + useState/useEffect + 同步渲染，够画一张静态页面 ——
+const hooks = [];
+let hookIdx = 0;
+let pendingEffects = [];
+let rootNode = null;
+
+function rerender() { hookIdx = 0; paint(); }
+
 const React = {
   createElement(type, props, ...children) {
     return { type, props: props || {}, children: children.flat(Infinity).filter((c) => c != null && c !== false) };
   },
+  useState(initial) {
+    const i = hookIdx++;
+    if (!(i in hooks)) hooks[i] = typeof initial === 'function' ? initial() : initial;
+    const set = (v) => { hooks[i] = typeof v === 'function' ? v(hooks[i]) : v; rerender(); };
+    return [hooks[i], set];
+  },
+  useEffect(fn, deps) {
+    const i = hookIdx++;
+    const prev = hooks[i];
+    const changed = !prev || !deps || !prev.deps || deps.some((d, k) => d !== prev.deps[k]);
+    hooks[i] = { deps };
+    if (changed) pendingEffects.push(fn);
+  },
+  useRef(v) { const i = hookIdx++; if (!(i in hooks)) hooks[i] = { current: v }; return hooks[i]; },
 };
+
 const kebab = (s) => s.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
-const UNITLESS = new Set(['opacity', 'fontWeight', 'lineHeight', 'zIndex', 'flexGrow', 'flexShrink', 'order', 'zoom']);
+const UNITLESS = new Set(['opacity', 'fontWeight', 'lineHeight', 'zIndex', 'flexGrow', 'flexShrink', 'order', 'zoom', 'flex']);
 function toStyle(style) {
-  if (!style) return '';
-  return Object.entries(style).map(([k, v]) => {
-    const val = typeof v === 'number' && !UNITLESS.has(k) ? `${v}px` : v;
-    return `${kebab(k)}:${val}`;
-  }).join(';');
+  return Object.entries(style || {}).map(([k, v]) =>
+    `${kebab(k)}:${typeof v === 'number' && !UNITLESS.has(k) ? v + 'px' : v}`).join(';');
 }
+
 function render(node) {
   if (node == null || node === false) return document.createTextNode('');
   if (typeof node === 'string' || typeof node === 'number') return document.createTextNode(String(node));
@@ -50,33 +66,56 @@ function render(node) {
   }
   if (typeof node.type === 'function') return render(node.type(node.props));
   const el = document.createElement(node.type);
-  const { props } = node;
-  for (const [k, v] of Object.entries(props)) {
+  for (const [k, v] of Object.entries(node.props)) {
     if (k === 'style') el.setAttribute('style', toStyle(v));
-    else if (k === 'title') el.setAttribute('title', v);
-    else if (k === 'data-prompt-doctor') el.setAttribute('data-prompt-doctor', v);
+    else if (k === 'onClick') el.addEventListener('click', () => v({ stopPropagation() {}, preventDefault() {} }));
+    else if (k === 'title' || k.startsWith('data-')) el.setAttribute(k, v);
   }
   node.children.forEach((c) => el.appendChild(render(c)));
   return el;
 }
 
-// —— 桩掉 DSH 的模块加载器，把 client.js 抓出来 ——
+function paint() {
+  if (!rootNode) return;
+  const frag = document.createDocumentFragment();
+  frag.appendChild(render(rootNode));
+  const root = document.getElementById('root');
+  root.replaceChildren(frag);
+  const effects = pendingEffects; pendingEffects = [];
+  effects.forEach((fn) => { try { fn(); } catch (e) { console.warn(e); } });
+}
+
+// —— 桩掉模块加载器与宿主 ctx ——
 let mod = null;
-window.__ModuleLoader__ = { load: ({ id, factory }) => { mod = factory((name) => { if (name === 'react') return React; throw new Error('no module ' + name); }); } };
+window.__ModuleLoader__ = { load: ({ id, factory }) => { mod = factory((n) => { if (n === 'react') return React; throw new Error('no module ' + n); }); } };
 </script>
+
 <script src="../client.js"></script>
+
 <script>
-  const slots = { inject: (name, cb) => ({ name, register: (meta, Comp) => ({ meta, Comp: cb() || Comp }) }) };
+  let PageComp = null;
+  let command = null;
   const ctx = {
     slots: {
-      inject(name, register) {
-        const r = register();
-        document.getElementById('slot').appendChild(render(React.createElement(r.Comp)));
-      },
+      inject(name, register) { const r = register(); if (r && r.Comp) PageComp = r.Comp; },
       register(meta, Comp) { return { meta, Comp }; },
+    },
+    inject(deps, fn) {
+      fn({
+        get: (name) => ({
+          register: (cmd) => { if (name === 'commandUi') command = cmd; return () => {}; },
+        }),
+        effect: (f) => { f(); return () => {}; },
+      });
     },
   };
   mod.apply(ctx);
+
+  // 模拟用户点了「/体检」命令
+  if (command && command.ui && typeof command.ui.run === 'function') command.ui.run({});
+
+  rootNode = React.createElement(PageComp);
+  paint();
 </script>
 </body>
 </html>
