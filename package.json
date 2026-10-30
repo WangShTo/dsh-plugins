@@ -1,0 +1,23 @@
+{
+  "name": "dsh-prompt-doctor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "提纯 · 把 DSH 会话日志里的真人提示词挖出来做体检：长度分布、指代率、返工率、闸门句，并在输入框上方常驻一张卡片。",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": ["index.js", "client.js", "lib", "tools", "cordis.patch.yml", "locale/*.json", "icon.svg", "README.md"],
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-conversation"]
+    }
+  },
+  "license": "MIT"
+}

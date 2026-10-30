@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>提纯 · 卡片预览</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center;
+    background: #eef6f7; color: #17323a;
+    font: 13px/1.5 "Microsoft YaHei UI", "Segoe UI", system-ui, sans-serif;
+  }
+  #stage { width: 820px; padding: 22px 24px; border-radius: 18px; background: #ffffff;
+           box-shadow: 0 10px 34px rgba(20, 60, 70, .13); }
+  .caption { margin-top: 10px; font-size: 11.5px; color: #6d8b93; letter-spacing: .01em; }
+  .composer { margin-top: 12px; height: 52px; border-radius: 14px; border: 1px solid #d7e6e9;
+              background: #f7fbfc; display: flex; align-items: center; padding: 0 14px; color: #9ab2b8; }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="slot"></div>
+    <div class="composer">发消息或创建任务，/ 调用指令，@ 文件或对话</div>
+    <div class="caption">同一份 client.js · 桩 React 渲染（真实挂载点在输入框上方，重启 DSH 后生效）</div>
+  </div>
+
+<script>
+// —— 迷你 React：只实现 createElement 与同步渲染，卡片不用 hooks ——
+const React = {
+  createElement(type, props, ...children) {
+    return { type, props: props || {}, children: children.flat(Infinity).filter((c) => c != null && c !== false) };
+  },
+};
+const kebab = (s) => s.replace(/[A-Z]/g, (m) => '-' + m.toLowerCase());
+const UNITLESS = new Set(['opacity', 'fontWeight', 'lineHeight', 'zIndex', 'flexGrow', 'flexShrink', 'order', 'zoom']);
+function toStyle(style) {
+  if (!style) return '';
+  return Object.entries(style).map(([k, v]) => {
+    const val = typeof v === 'number' && !UNITLESS.has(k) ? `${v}px` : v;
+    return `${kebab(k)}:${val}`;
+  }).join(';');
+}
+function render(node) {
+  if (node == null || node === false) return document.createTextNode('');
+  if (typeof node === 'string' || typeof node === 'number') return document.createTextNode(String(node));
+  if (Array.isArray(node)) {
+    const frag = document.createDocumentFragment();
+    node.forEach((n) => frag.appendChild(render(n)));
+    return frag;
+  }
+  if (typeof node.type === 'function') return render(node.type(node.props));
+  const el = document.createElement(node.type);
+  const { props } = node;
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'style') el.setAttribute('style', toStyle(v));
+    else if (k === 'title') el.setAttribute('title', v);
+    else if (k === 'data-prompt-doctor') el.setAttribute('data-prompt-doctor', v);
+  }
+  node.children.forEach((c) => el.appendChild(render(c)));
+  return el;
+}
+
+// —— 桩掉 DSH 的模块加载器，把 client.js 抓出来 ——
+let mod = null;
+window.__ModuleLoader__ = { load: ({ id, factory }) => { mod = factory((name) => { if (name === 'react') return React; throw new Error('no module ' + name); }); } };
+</script>
+<script src="../client.js"></script>
+<script>
+  const slots = { inject: (name, cb) => ({ name, register: (meta, Comp) => ({ meta, Comp: cb() || Comp }) }) };
+  const ctx = {
+    slots: {
+      inject(name, register) {
+        const r = register();
+        document.getElementById('slot').appendChild(render(React.createElement(r.Comp)));
+      },
+      register(meta, Comp) { return { meta, Comp }; },
+    },
+  };
+  mod.apply(ctx);
+</script>
+</body>
+</html>
