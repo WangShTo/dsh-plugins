@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.5.0 — 2026-10-30
+
+体检的结论从「我编的典型例子」换成**真实翻车片段**，并补上「用前用后」量化。
+
+### 新增
+
+- `lib/audit.mjs` 导出 `collectPrompts()`（带 `time` 的真人提示）与 `collectEvents()`（用户原话 + 我的回复，按时间排序）。
+- `lib/trend.mjs`：`weekly()` 按自然周算条数/返工率/中位长度；`effect()` 用托管块写入时间切成用前用后，样本不足 `<20` 条时 `delta=null` 并明说不足；`formatTrend()` 输出表格 + 火花线 + 「相关不是因果」提醒。
+- `tools/trend.mjs` CLI：`node tools/trend.mjs [--since 2026-10-30] [--json]`。
+- `scripts/smoke-trend.mjs`：周切分、样本不足、delta 计算、文本输出四组断言。
+- `lib/agents.mjs`：每次写入追加 `fits.jsonl` 历史；`firstFitAt()` 取最早一次写入作为趋势分界（没有历史时用目标文件创建时间兜底）。
+
+### 变更
+
+- `lib/fit.mjs` 的 `deriveRules(report, incidents)`：七条规则的 `evidence` 改为从 `lib/incidents.mjs` 抽取的真实片段（用户原话 ← 我上一句宣称完成），并保证同一事件不被两条规则重复引用；新增第 8 条「最常翻车的地方」（≥3 次才生成）。
+- 沙箱写入（冒烟测试）不再污染真实的 `last-fit.json`。
+
 ## v0.3.0 — 2026-10-30
 
 从「体检」到**自动适配**：分析结果不再只是数字，而是写进指令文件、每轮生效的约定。
