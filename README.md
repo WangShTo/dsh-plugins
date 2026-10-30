@@ -4,9 +4,11 @@
 
 | 包 | 状态 | 一句话 |
 |---|---|---|
-| [`packages/prompt-doctor`](packages/prompt-doctor) | v1.0.0 可用 | 提纯：读会话日志学你的习惯，把规则写进 `~/.agents/AGENTS.md`，省的是返工不是字数 |
-| `packages/route-gate` | 设计完成，未实现 | 先定路线再开工：工具层硬闸 + 预算熔断 |
-| `packages/auto-session` | 规划中 | 上下文满了自动交接换会话 |
+| [`packages/prompt-doctor`](packages/prompt-doctor) | **v1.0.0,可用** | 提纯：读会话日志学你的习惯，把规则写进 `~/.agents/AGENTS.md`，省的是返工不是字数 |
+| `dsh-route-gate` | 设计完成，未实现 | 先定路线再开工：工具层硬闸 + 预算熔断（设计稿在 `G:\all workspace\插件\调用顺序\docs\`） |
+| `dsh-auto-session` | 规划中 | 上下文满了自动交接换会话 |
+
+只发已实现的包。后两个等做出来再进 `packages/`——占位目录会比没有更容易让人装错东西。
 
 三个包都**零运行时依赖**，只吃宿主提供的服务（`tools`、`systemPrompt` 等），所以不会因为某个 `@deepseek-ai/*` 包改名而一起挂掉。
 
