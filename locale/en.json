@@ -1,6 +1,0 @@
-{
-  "meta": {
-    "title": "Prompt Doctor",
-    "description": "Mines your real prompts out of DSH session logs and shows a health check: length spread, pronoun rate, rework rate, gate phrases."
-  }
-}

@@ -1,4 +1,0 @@
-# 挂载声明：一行 Host entry（Host 半只负责 agent 工具，卡片由 client.js 渲染）。
-- insert:
-    - id: prompt-doctor
-      name: dsh-prompt-doctor

@@ -1,3 +1,7 @@
 node_modules/
-shot/*.tmp
-.refs/
+.tmp/
+.archify/
+.dsh-pilot/
+*.log
+*.bak
+*.bak-*

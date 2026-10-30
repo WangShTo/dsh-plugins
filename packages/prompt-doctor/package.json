@@ -1,0 +1,48 @@
+{
+  "name": "dsh-prompt-doctor",
+  "version": "1.0.0",
+  "description": "提纯：把 DSH 会话日志变成可验证的行为规则。省的不是你的输入字数，是来回返工烧掉的上下文。",
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "lib/",
+    "tools/",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22.15"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "cordis",
+    "plugin",
+    "prompt",
+    "token"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WangShTo/dsh-plugins.git",
+    "directory": "packages/prompt-doctor"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "smoke": "node ../../scripts/smoke-tools.mjs",
+    "cli": "node tools/cli.mjs"
+  },
+  "bin": {
+    "dsh-prompt-doctor": "tools/cli.mjs"
+  }
+}
