@@ -2,7 +2,7 @@
   "name": "dsh-plugins",
   "private": true,
   "version": "1.0.0",
-  "description": "三个互相独立的 DeepSeek Harness 插件：想用哪个装哪个",
+  "description": "两个互相独立的 DeepSeek Harness 插件：提问体检（prompt-doctor）+ 路线闸门（route-gate）。装哪个用哪个。",
   "type": "module",
   "workspaces": [
     "packages/*"

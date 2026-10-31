@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>dsh-route-gate · 架构与路线</title>
+<style>
+  :root{
+    --ink:#111827; --sub:#5b6472; --line:#e3e7ee; --bg:#f6f7f9; --card:#fff;
+    --indigo:#4f46e5; --blue:#2563eb; --green:#059669; --red:#dc2626; --amber:#b45309;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:15px/1.6 "Segoe UI","Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;}
+  .wrap{max-width:1320px;margin:0 auto;padding:36px 28px 56px}
+  header h1{margin:0 0 6px;font-size:26px;letter-spacing:.2px}
+  header p{margin:0;color:var(--sub);font-size:14px}
+  .badge{display:inline-block;margin-left:10px;padding:2px 8px;border-radius:999px;
+    background:#eef2ff;color:var(--indigo);font-size:12px;vertical-align:2px}
+  section{margin-top:30px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px}
+  h2{margin:0 0 4px;font-size:17px}
+  .hint{margin:0 0 14px;color:var(--sub);font-size:13px}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--sub);margin:2px 0 10px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:0}
+  svg{width:100%;height:auto;display:block}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .note{border:1px solid var(--line);border-radius:12px;padding:14px 16px;background:#fcfcfd}
+  .note h3{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .note ul{margin:0;padding-left:16px;color:#374151;font-size:12.5px;line-height:1.62}
+  .phases{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .phase{border:1px solid var(--line);border-radius:12px;padding:14px 16px;position:relative;background:#fcfcfd}
+  .phase .k{font-size:11.5px;letter-spacing:.08em;color:var(--sub)}
+  .phase h3{margin:4px 0 8px;font-size:14px}
+  .phase ul{margin:0;padding-left:16px;font-size:12.5px;color:#374151;line-height:1.6}
+  .chip{position:absolute;top:12px;right:12px;font-size:11px;padding:1px 7px;border-radius:999px;
+    background:#f3f4f6;color:#6b7280}
+  .chip.now{background:#eef2ff;color:var(--indigo)}
+  footer{margin-top:26px;color:#8b93a1;font-size:12px}
+  .flowline{font-size:12.5px;color:var(--sub);margin:10px 0 0}
+  code{background:#f2f4f8;padding:1px 5px;border-radius:5px;font-size:12px;color:#334155}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>dsh-route-gate<span class="badge">设计稿 · 代码未开工</span></h1>
+    <p>每个任务先出路线卡、用户点了「开工」才解锁执行类工具；工具调用有预算，超线就逼收尾。</p>
+  </header>
+
+  <section>
+    <h2>主线：一条消息怎么走到工具执行</h2>
+    <p class="hint">上排从左到右是「判定与出卡」，下排从右到左是「确认、解锁、执行、计数」。闸门在 <code>tools/pre-execute</code>，不依赖模型自觉。</p>
+    <div class="legend">
+      <span><i style="background:#eef2ff;border:1px solid #c7d2fe"></i>插件</span>
+      <span><i style="background:#eff6ff;border:1px solid #bfdbfe"></i>DSH 运行时</span>
+      <span><i style="background:#ecfdf5;border:1px solid #bbf7d0"></i>界面</span>
+      <span><i style="background:#fff1f2;border:1px solid #fecaca"></i>闸门 / 状态</span>
+      <span><i style="background:#fafafa;border:1px solid #e5e7eb"></i>用户</span>
+    </div>
+    <svg viewBox="0 0 1280 430" role="img" aria-label="dsh-route-gate 架构图">
+      <defs>
+        <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#9aa4b2"/>
+        </marker>
+        <marker id="arw-e" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#4f46e5"/>
+        </marker>
+        <marker id="arw-s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#dc2626"/>
+        </marker>
+      </defs>
+
+      <!-- row 1 -->
+      <rect x="40" y="40" width="170" height="78" rx="11" fill="#fafafa" stroke="#e5e7eb"/>
+      <text x="125" y="72" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">用户消息</text>
+      <text x="125" y="93" text-anchor="middle" font-size="11.5" fill="#6b7280">一条自然语言任务</text>
+
+      <rect x="290" y="40" width="170" height="78" rx="11" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="375" y="72" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">回合循环</text>
+      <text x="375" y="93" text-anchor="middle" font-size="11.5" fill="#6b7280">pre-step · turn/step</text>
+
+      <rect x="540" y="40" width="170" height="78" rx="11" fill="#eef2ff" stroke="#c7d2fe"/>
+      <text x="625" y="72" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">触发器判定</text>
+      <text x="625" y="93" text-anchor="middle" font-size="11.5" fill="#6b7280">auto 默认 · 可关</text>
+
+      <rect x="790" y="40" width="170" height="78" rx="11" fill="#eef2ff" stroke="#c7d2fe"/>
+      <text x="875" y="72" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">策略段</text>
+      <text x="875" y="93" text-anchor="middle" font-size="11.5" fill="#6b7280">注入 systemPrompt</text>
+
+      <rect x="1040" y="40" width="170" height="78" rx="11" fill="#eef2ff" stroke="#c7d2fe"/>
+      <text x="1125" y="72" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">route_card 工具</text>
+      <text x="1125" y="93" text-anchor="middle" font-size="11.5" fill="#6b7280">结构化路线卡</text>
+
+      <!-- row 2 -->
+      <rect x="1040" y="250" width="170" height="78" rx="11" fill="#ecfdf5" stroke="#bbf7d0"/>
+      <text x="1125" y="282" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">评审卡</text>
+      <text x="1125" y="303" text-anchor="middle" font-size="11.5" fill="#6b7280">两键 · 原生面板</text>
+
+      <rect x="790" y="250" width="170" height="78" rx="11" fill="#fff1f2" stroke="#fecaca"/>
+      <text x="875" y="282" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">会话状态机</text>
+      <text x="875" y="303" text-anchor="middle" font-size="11.5" fill="#6b7280">gated → executing</text>
+
+      <rect x="540" y="250" width="170" height="78" rx="11" fill="#fff1f2" stroke="#fecaca"/>
+      <text x="625" y="282" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">工具闸门</text>
+      <text x="625" y="303" text-anchor="middle" font-size="11.5" fill="#6b7280">tools/pre-execute</text>
+
+      <rect x="290" y="250" width="170" height="78" rx="11" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="375" y="282" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">工具执行</text>
+      <text x="375" y="303" text-anchor="middle" font-size="11.5" fill="#6b7280">只读先行 · 批量并发</text>
+
+      <rect x="40" y="250" width="170" height="78" rx="11" fill="#eef2ff" stroke="#c7d2fe"/>
+      <text x="125" y="282" text-anchor="middle" font-size="14.5" font-weight="600" fill="#111827">预算熔断</text>
+      <text x="125" y="303" text-anchor="middle" font-size="11.5" fill="#6b7280">80% 提醒 · 100% 收尾</text>
+
+      <!-- arrows row 1 -->
+      <line x1="210" y1="79" x2="284" y2="79" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#arw-e)"/>
+      <text x="247" y="70" text-anchor="middle" font-size="11.5" fill="#4f46e5">① 输入</text>
+
+      <line x1="460" y1="79" x2="534" y2="79" stroke="#9aa4b2" stroke-width="1.4" marker-end="url(#arw)"/>
+      <text x="497" y="70" text-anchor="middle" font-size="11.5" fill="#6b7280">② 起始</text>
+
+      <line x1="710" y1="79" x2="784" y2="79" stroke="#9aa4b2" stroke-width="1.4" marker-end="url(#arw)"/>
+      <text x="747" y="70" text-anchor="middle" font-size="11.5" fill="#6b7280">③ 判定</text>
+
+      <line x1="960" y1="79" x2="1034" y2="79" stroke="#9aa4b2" stroke-width="1.4" marker-end="url(#arw)"/>
+      <text x="997" y="70" text-anchor="middle" font-size="11.5" fill="#6b7280">④ 写卡</text>
+
+      <!-- vertical -->
+      <line x1="1125" y1="118" x2="1125" y2="244" stroke="#4f46e5" stroke-width="1.6" marker-end="url(#arw-e)"/>
+      <text x="1136" y="185" font-size="11.5" fill="#4f46e5">⑤ 弹窗</text>
+
+      <!-- arrows row 2 -->
+      <line x1="1040" y1="289" x2="966" y2="289" stroke="#9aa4b2" stroke-width="1.4" marker-end="url(#arw)"/>
+      <text x="1003" y="280" text-anchor="middle" font-size="11.5" fill="#6b7280">⑥ 选择</text>
+
+      <line x1="790" y1="289" x2="716" y2="289" stroke="#9aa4b2" stroke-width="1.4" marker-end="url(#arw)"/>
+      <text x="753" y="280" text-anchor="middle" font-size="11.5" fill="#6b7280">⑦ 解锁</text>
+
+      <line x1="540" y1="289" x2="466" y2="289" stroke="#dc2626" stroke-width="1.6" marker-end="url(#arw-s)"/>
+      <text x="503" y="280" text-anchor="middle" font-size="11.5" fill="#dc2626">⑧ 放行</text>
+
+      <line x1="290" y1="289" x2="216" y2="289" stroke="#9aa4b2" stroke-width="1.4" stroke-dasharray="5 4" marker-end="url(#arw)"/>
+      <text x="253" y="280" text-anchor="middle" font-size="11.5" fill="#6b7280">⑨ 计数</text>
+
+      <!-- notes -->
+      <text x="40" y="392" font-size="12" fill="#6b7280">gated 阶段只放行只读工具；点「开工」→ executing，执行类工具才解闸。到工具预算上限时，闸门返回可读理由并要求模型收尾。</text>
+    </svg>
+  </section>
+
+  <section>
+    <h2>四条硬口径</h2>
+    <p class="hint">这些是设计参数，写进 Config，装完能在设置页改。</p>
+    <div class="grid">
+      <div class="note">
+        <h3><span class="dot" style="background:#0891b2"></span>触发规则（auto 默认）</h3>
+        <ul>
+          <li>新会话第一条、带执行动词的新任务：弹卡确认</li>
+          <li>「继续 / 好 / 改一下」这类接续句：只出一行路线卡，不拦</li>
+          <li>点「开工 · 按推荐」才解闸；要改路线点「先改路线」</li>
+          <li>本会话免确认走 <code>/route off</code>，新会话自动恢复</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h3><span class="dot" style="background:#059669"></span>硬闸口径</h3>
+        <ul>
+          <li>拦：write / edit / bash / pwsh / subagent</li>
+          <li>放：read / grep / glob / web_search / web_fetch</li>
+          <li>生效点是 <code>tools/pre-execute</code> 的返回值，不靠模型自觉</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h3><span class="dot" style="background:#b45309"></span>预算</h3>
+        <ul>
+          <li>计划期：最多 4 次只读探查就要出卡</li>
+          <li>执行期：每回合 12 次工具，80% 提醒、100% 要收尾</li>
+          <li>到线返回可读理由，不硬断回合</li>
+        </ul>
+      </div>
+      <div class="note">
+        <h3><span class="dot" style="background:#7c3aed"></span>借鉴来源</h3>
+        <ul>
+          <li>spec-kit：阶段闸门，先定再动手</li>
+          <li>Cline：Plan/Act 双模式 + 工具白名单</li>
+          <li>Roo Code：子任务隔离上下文（已归档，只借思想）</li>
+          <li>humanlayer：人工审批闸门 allow / reject</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>整体推进节奏</h2>
+    <p class="hint">每一步都有可验收的产出，不是「写完了再试」。</p>
+    <div class="phases">
+      <div class="phase">
+        <span class="chip now">下一步</span>
+        <div class="k">P0 · 30 分钟</div>
+        <h3>探针：验证三个钩子</h3>
+        <ul>
+          <li>pre-step 的 turn/step 语义</li>
+          <li>approval 服务是否装配</li>
+          <li>pre-execute 拦截是否真的挡住 write</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="chip">P1</span>
+        <div class="k">核心闭环</div>
+        <h3>能拦、能确认、能放行</h3>
+        <ul>
+          <li>策略段 + route_card + 闸门 + 状态机</li>
+          <li>auto 触发 + <code>/route</code> 命令</li>
+          <li>装进 desktop profile，截图验收</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="chip">P2</span>
+        <div class="k">降 token</div>
+        <h3>预算与上下文</h3>
+        <ul>
+          <li>计划期/执行期双预算</li>
+          <li>大范围探查强制走 subagent</li>
+          <li>接入官方重复调用提醒</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="chip">P3</span>
+        <div class="k">打磨</div>
+        <h3>体验与可见性</h3>
+        <ul>
+          <li>路线卡自定义卡片样式</li>
+          <li>免打扰状态跨会话</li>
+          <li>拦截审计（哪次被挡过）</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>设计稿 · 2026-10-30 · 插件目录 G:\all workspace\插件\调用顺序 · 尚未写代码</footer>
+</div>
+</body>
+</html>

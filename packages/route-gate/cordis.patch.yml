@@ -1,0 +1,8 @@
+- insert:
+    - id: route-gate
+      name: dsh-route-gate
+      config:
+        trigger: auto
+        turnToolBudget: 12
+        planReadBudget: 4
+        locale: zh
