@@ -11,11 +11,12 @@
 /**
  * Render the policy section.
  *
- * @param {{ locale?: string, turnToolBudget: number, planReadBudget: number, strict?: boolean }} config Plugin config.
+ * @param {{ locale?: string, turnToolBudget: number, turnTokenBudget: number, planReadBudget: number, strict?: boolean }} config Plugin config.
  * @returns {string} Markdown policy text, or an empty string when disabled.
  */
 export function policyText(config) {
   const budget = String(config.turnToolBudget);
+  const tokenBudget = String(config.turnTokenBudget ?? 0);
   const reads = String(config.planReadBudget);
 
   if (config.locale === 'en') {
@@ -32,7 +33,7 @@ export function policyText(config) {
       'The card is the decision, not a summary: first line says what to click, then the routes. Keep it under eight short lines so it fits on one screen without scrolling. Then wait. Until the card is approved, `write`, `edit`, `bash`, `pwsh` and `subagent` are rejected by the tool gate.',
       `While planning you may read (read, grep, glob, web) — at most ${reads} calls. Batch independent reads into one step instead of probing one file at a time.`,
       '',
-      `Budget: ${budget} executed tool calls per turn. When a call is denied, do not retry it — either call \`route_card\`, or stop and report what is blocked.`,
+      `Budget: ${budget} executed tool calls per turn, or about ${tokenBudget} tokens of tool output, whichever comes first. Prefer one batched read over five narrow ones; a single command that prints a whole file costs as much as the twenty you avoided. When a call is denied, do not retry it — either call \`route_card\`, or stop and report what is blocked.`,
     ].join('\n');
   }
 
@@ -49,6 +50,6 @@ export function policyText(config) {
     '卡片是决策不是总结：第一行就说点什么，然后列路线。整卡不超过八行，一屏读完不滚动。然后等用户决定。卡片没批之前，`write`、`edit`、`bash`、`pwsh`、`subagent` 会被工具闸门拒掉。',
     `计划期可以读（read / grep / glob / web），最多 ${reads} 次；能并行的读要一次发完，不要一个文件一个文件探。`,
     '',
-    `预算：每个回合最多 ${budget} 次实际执行的工具调用。被拒的工具不要原样重试——要么调 \`route_card\`，要么停下来说清卡在哪。`,
+    `预算：每个回合最多 ${budget} 次实际执行的工具调用，或约 ${tokenBudget} token 的工具输出，哪个先到算哪个。一次批量读取胜过五次窄读；一条把整个文件打出来的命令，等于把你省下的二十次又花了回去。被拒的工具不要原样重试——要么调 \`route_card\`，要么停下来说清卡在哪。`,
   ].join('\n');
 }

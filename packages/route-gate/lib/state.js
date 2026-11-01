@@ -25,6 +25,7 @@ export const PHASE = Object.freeze({
  * @property {string} phase One of {@link PHASE}.
  * @property {boolean} trusted Session-wide opt-out flag.
  * @property {number} calls Tool calls actually executed in this turn.
+ * @property {number} tokens Estimated tokens of tool output in this turn.
  * @property {number} reads Read-only calls made while planning in this turn.
  * @property {number | undefined} turn Turn number this state is tracking.
  * @property {number} cards Route cards shown in this session.
@@ -41,6 +42,7 @@ export function createState() {
     phase: PHASE.OPEN,
     trusted: false,
     calls: 0,
+    tokens: 0,
     reads: 0,
     turn: undefined,
     cards: 0,
@@ -58,6 +60,7 @@ export function createState() {
  */
 export function startTurn(state, turn) {
   state.calls = 0;
+  state.tokens = 0;
   state.reads = 0;
   state.turn = turn;
   state.phase = state.trusted ? PHASE.TRUSTED : PHASE.OPEN;
@@ -74,6 +77,7 @@ export function startTurn(state, turn) {
 export function approve(state) {
   state.phase = PHASE.TRUSTED === state.phase ? PHASE.TRUSTED : PHASE.APPROVED;
   state.calls = 0;
+  state.tokens = 0;
   state.reads = 0;
   return state;
 }
@@ -90,6 +94,7 @@ export function setTrusted(state, trusted) {
   if (trusted) {
     state.phase = PHASE.TRUSTED;
     state.calls = 0;
+    state.tokens = 0;
     state.reads = 0;
   } else {
     state.phase = PHASE.OPEN;

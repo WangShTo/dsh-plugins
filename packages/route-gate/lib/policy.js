@@ -108,6 +108,21 @@ export function overBudget(state, turnToolBudget) {
 }
 
 /**
+ * Decide whether this turn has already burned its tool-output allowance.
+ *
+ * Counted in estimated tokens rather than calls: one chatty tool is worth
+ * twenty quiet ones, and the budget exists to bound what the model re-reads on
+ * every following step.
+ *
+ * @param {{ tokens: number }} state Per-agent gate state.
+ * @param {number} turnTokenBudget Maximum estimated tokens of tool output per turn.
+ * @returns {boolean} True when the call must be denied.
+ */
+export function overTokenBudget(state, turnTokenBudget) {
+  return state.tokens >= turnTokenBudget;
+}
+
+/**
  * Decide whether the planning allowance for read-only probes is spent.
  *
  * @param {{ reads: number }} state Per-agent gate state.

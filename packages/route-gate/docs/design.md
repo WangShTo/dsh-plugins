@@ -46,16 +46,17 @@ const denialReason = decision.kind === "allow" ? this.guardReason(exec) : decisi
 - 理由会原样出现在模型的工具结果里（前缀 `Error: `），也会出现在界面上，所以文案要同时给模型和用户看；
 - 放行 = 调 `next()`，并把它的结果返回，保证其他插件的闸门（比如官方 approval）仍然生效。
 
-判定顺序（先预算、再分类）：
+判定顺序（先 token、再次数、再分类）：
 
 ```
-trigger === 'off'            → next()
-无 agent（非会话调用）        → next()
-phase === 'trusted'          → next()
-calls >= turnToolBudget      → deny(预算)
-classify === 'read'          → strict 且 reads >= planReadBudget ? deny : next()
-classify === 'write'         → phase === 'approved' ? next() : deny(路线)
-classify === 'unknown'       → next()
+trigger === 'off'                       → next()
+无 agent（非会话调用）                    → next()
+phase === 'trusted'                     → next()
+turnTokenBudget > 0 且 tokens >= 预算     → deny(token 预算)
+calls >= turnToolBudget                 → deny(预算)
+classify === 'read'                     → strict 且 reads >= planReadBudget ? deny : next()
+classify === 'write'                    → phase === 'approved' ? next() : deny(路线)
+classify === 'unknown'                  → next()
 ```
 
 ### 2.3 `tools/post-execute` 计数
@@ -66,6 +67,7 @@ ctx.on('tools/post-execute', async (exec, result, next) => { ... })
 
 - 只在 `result.isError !== true` 时计数：被拒的调用没执行，不该吃预算，否则模型被拦一次就少一次额度，越拦越死。
 - 预算在「下一次调用前」判定，所以是「最多执行 N 次」，不是「第 N+1 次失败」。
+- `tokens += resultTokens(result) + callTokens(exec)`：结果里只算 `type: 'text'` 的字符数，参数按 JSON 长度算——参数也进上下文，一次 `write` 写两百行，读回来还要再花一遍。折算按 `4 字符 ≈ 1 token`，只用于判「这条链是不是在烧钱」，不对账。
 
 ### 2.4 回合边界
 

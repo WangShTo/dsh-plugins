@@ -1,6 +1,6 @@
 {
   "name": "dsh-route-gate",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Route first, work second: a DSH plugin that makes every session present a route card for human approval and hard-blocks mutating tools until it is approved.",
   "type": "module",
   "main": "./lib/index.js",
@@ -17,7 +17,7 @@
     "docs/card-mock.png"
   ],
   "scripts": {
-    "test": "node --test test/policy.test.js test/apply.test.js"
+    "test": "node --test test/policy.test.js test/apply.test.js test/weight.test.js"
   },
   "keywords": [
     "dsh",

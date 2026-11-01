@@ -202,6 +202,31 @@ test('the turn budget stops the chain and counts only executed calls', async () 
   assert.equal(stillBlocked.kind, 'deny');
 });
 
+test('a chatty tool is stopped by the token budget, not the call count', async () => {
+  const { ctx, handlers, tools } = makeCtx();
+  apply(ctx, Config({ turnToolBudget: 99, turnTokenBudget: 1000 }));
+
+  const agent = {};
+  await fire(handlers, 'agent/pre-step', { agent, messages: [{ source: { kind: 'user' } }], turn: 1 }, async () => ({
+    kind: 'enter',
+    messages: [],
+  }));
+  const card = tools.find((item) => item.name === 'route_card');
+  await card.execute({ goal: 'g', routes: ROUTES }, { agent });
+
+  // One 8000-character dump ≈ 2000 tokens: over the allowance, under the call cap.
+  await firePost(
+    handlers,
+    { agent, name: 'read', arguments: { path: 'big.log' } },
+    { isError: false, content: [{ type: 'text', text: 'x'.repeat(8000) }] },
+  );
+
+  const blocked = await fire(handlers, 'tools/pre-execute', { agent, name: 'read' }, allow);
+  assert.equal(blocked.kind, 'deny');
+  assert.match(blocked.reason, /token/);
+  assert.match(blocked.reason, /2k|2000/);
+});
+
 test('strict mode caps planning reads, auto mode does not', async () => {
   const strict = makeCtx();
   apply(strict.ctx, Config({ trigger: 'strict', planReadBudget: 1 }));

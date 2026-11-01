@@ -12,9 +12,10 @@
 
 import z from '@deepseek-ai/schemastery';
 import { buildCard, copyFor, decisionFromAnswer, ROUTE_QUESTION_ID } from './card.js';
-import { classify, compileLists, overBudget, overPlanReads } from './policy.js';
+import { classify, compileLists, overBudget, overPlanReads, overTokenBudget } from './policy.js';
 import { policyText } from './prompt.js';
 import { approve, createState, PHASE, setTrusted, startTurn } from './state.js';
+import { callTokens, resultTokens } from './weight.js';
 
 /**
  * `defineTool` is provided by the host: it compiles the shorthand parameter
@@ -43,6 +44,12 @@ export const Config = z.object({
     .number()
     .default(12)
     .description('Executed tool calls allowed per turn before the gate forces a report.'),
+  turnTokenBudget: z
+    .number()
+    .default(60000)
+    .description(
+      'Estimated tokens of tool output allowed per turn (4 characters ≈ 1 token). 0 disables the token bound.',
+    ),
   planReadBudget: z
     .number()
     .default(4)
@@ -65,6 +72,8 @@ const DENIALS = {
       `【路线闸门】路线还没确认，\`${tool}\` 被挡下了。先调 route_card 交一张路线卡（目的 / 交付物 / 验收 / 步骤 / 范围 / 风险），等用户点「开工」。不要换个工具绕。本轮执行预算 ${budget} 次。`,
     budget: (budget) =>
       `【路线闸门】本回合 ${budget} 次工具预算用完了。停下手上的调用，向用户汇报：做完了什么、卡在哪、下一步建议。`,
+    budgetTokens: (spent, budget) =>
+      `【路线闸门】本回合工具输出已经累计约 ${spent} token（上限 ${budget}），再调下去只是烧钱。停手，向用户汇报：做完了什么、卡在哪、下一步建议。`,
     planReads: (reads) =>
       `【路线闸门】计划期只读额度（${reads} 次）用完了。别再探了，现在调 route_card 交路线卡，等用户确认。`,
   },
@@ -73,6 +82,8 @@ const DENIALS = {
       `[route-gate] No approved route yet, so \`${tool}\` was blocked. Call route_card first (goal / deliverable / acceptance / steps / scope / risks) and wait for the user to choose Start. Do not route around this with another tool. Budget this turn: ${budget}.`,
     budget: (budget) =>
       `[route-gate] The ${budget}-call budget for this turn is spent. Stop calling tools and report: what is done, what is blocked, what you suggest next.`,
+    budgetTokens: (spent, budget) =>
+      `[route-gate] Tool output this turn has reached ~${spent} tokens (limit ${budget}); further calls only spend money. Stop and report: what is done, what is blocked, what you suggest next.`,
     planReads: (reads) =>
       `[route-gate] The ${reads}-read planning allowance is spent. Stop probing and call route_card now.`,
   },
@@ -86,6 +97,7 @@ const DENIALS = {
  */
 export function apply(ctx, config) {
   const turnToolBudget = Math.max(1, Math.floor(config.turnToolBudget));
+  const turnTokenBudget = Math.max(0, Math.floor(config.turnTokenBudget ?? 0));
   const planReadBudget = Math.max(0, Math.floor(config.planReadBudget));
   const denials = DENIALS[config.locale === 'en' ? 'en' : 'zh'];
   const lists = compileLists(config);
@@ -133,6 +145,7 @@ export function apply(ctx, config) {
     if (agent !== undefined && result?.isError !== true) {
       const state = stateOf(agent);
       state.calls += 1;
+      state.tokens += resultTokens(result) + callTokens(exec);
       if (classify(exec.name, lists) === 'read') state.reads += 1;
     }
     return next();
@@ -145,6 +158,11 @@ export function apply(ctx, config) {
 
     const state = stateOf(agent);
     if (state.phase === PHASE.TRUSTED) return next();
+
+    if (turnTokenBudget > 0 && overTokenBudget(state, turnTokenBudget)) {
+      state.denials += 1;
+      return { kind: 'deny', reason: denials.budgetTokens(formatTokens(state.tokens), formatTokens(turnTokenBudget)) };
+    }
 
     if (overBudget(state, turnToolBudget)) {
       state.denials += 1;
@@ -298,12 +316,26 @@ export function apply(ctx, config) {
             .replace('{phase}', state.phase)
             .replace('{calls}', String(state.calls))
             .replace('{budget}', String(turnToolBudget))
+            .replace('{tokens}', formatTokens(state.tokens))
+            .replace('{tokenBudget}', formatTokens(turnTokenBudget))
             .replace('{cards}', String(state.cards))
             .replace('{denials}', String(state.denials)),
         };
       },
     });
   });
+}
+
+/**
+ * Format a token count for copy: 60000 → "60k".
+ *
+ * @param {number} value Tokens.
+ * @returns {string} Short human form.
+ */
+function formatTokens(value) {
+  if (!Number.isFinite(value) || value <= 0) return '0';
+  if (value >= 1000) return `${Math.round(value / 1000)}k`;
+  return String(value);
 }
 
 /**

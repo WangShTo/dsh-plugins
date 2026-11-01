@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-11-01
+
+### Added
+
+- **Token budget**: the per-turn bound is now spent in estimated tool-output
+  tokens as well as calls — `turnTokenBudget`, default 60000, `0` disables.
+  Weight counts the text of a result plus the JSON of its arguments (4
+  characters ≈ 1 token), so one command that dumps a file costs what it should
+  instead of counting the same as twenty greps. Denial copy states the spend
+  ("约 62k token / 上限 60k") so the model knows it is over money, not over
+  count.
+- `/route` status now shows `calls/budget · tokens/tokenBudget`.
+
+### Changed
+
+- `lib/weight.js` (pure functions) owns the estimate; `lib/state.js` carries
+  `tokens` and resets it with the other counters; `lib/policy.js` exposes
+  `overTokenBudget`.
+- `npm test` now runs the weight suite too (25 cases).
+
 ## [0.4.0] — 2026-11-01
 
 ### Changed

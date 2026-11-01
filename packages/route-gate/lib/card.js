@@ -35,7 +35,7 @@ const COPY = {
     reviseHint: '先不执行。下一句说「B」或「C」，我就换那条路线重出卡。',
     offText: '路线闸门：本会话已关闭（/route on 可恢复）。',
     onText: '路线闸门：已重新打开，下一次改动前要交路线卡。',
-    statusText: '路线闸门：{phase}｜本回合 {calls}/{budget} 次调用｜已出卡 {cards} 张｜累计拦截 {denials} 次。',
+    statusText: '路线闸门：{phase}｜本回合 {calls}/{budget} 次调用 · {tokens}/{tokenBudget} token｜已出卡 {cards} 张｜累计拦截 {denials} 次。',
   },
   en: {
     header: 'Route card · pick one',
@@ -54,7 +54,7 @@ const COPY = {
     reviseHint: 'Do not execute. Reply with B or C and I re-issue the card on that route.',
     offText: 'Route gate: off for this session (use /route on to re-arm).',
     onText: 'Route gate: on again — a route card is required before the next change.',
-    statusText: 'Route gate: {phase} | {calls}/{budget} calls this turn | {cards} cards | {denials} blocked.',
+    statusText: 'Route gate: {phase} | {calls}/{budget} calls · {tokens}/{tokenBudget} tokens this turn | {cards} cards | {denials} blocked.',
   },
 };
 

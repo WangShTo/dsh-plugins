@@ -16,7 +16,7 @@ DSH（DeepSeek Harness）插件。模型想改东西之前，必须先交一张�
 | --- | --- |
 | 模型读完需求直接开干，写歪了要等它写完才发现 | 先看一张卡，方向不对一句话打回，一个文件都没动 |
 | 提示词里写「先规划」，模型照样跳过 | 闸门在 `tools/pre-execute`，`write` / `edit` / `bash` 返回拒绝，绕不过去 |
-| 一个回合几十次工具调用，token 悄悄烧完 | 每回合 12 次（可配）硬上限，到点强制收尾 |
+| 一个回合几十次工具调用，token 悄悄烧完 | 每回合 12 次调用 / 6 万 token 双上限（可配），到点强制收尾 |
 | 计划期一个文件一个文件地探 | 能并行的读取一次发完；`strict` 把只读次数也做成硬拦 |
 
 ---
@@ -104,6 +104,7 @@ B · 稳妥 · 多 5 分钟
 | --- | --- | --- |
 | `trigger` | `auto` | `auto` 改东西前必须过卡；`strict` 再把计划期只读次数做成硬拦；`off` 整行关掉 |
 | `turnToolBudget` | `12` | 每回合实际执行的工具调用上限，到了就拦并要求收尾 |
+| `turnTokenBudget` | `60000` | 每回合工具输出的 token 上限（约数：4 字符 ≈ 1 token，参数和结果都算），`0` 关闭 |
 | `planReadBudget` | `4` | 出卡前允许的只读次数，只在 `strict` 下生效 |
 | `locale` | `zh` | 卡片、拒绝文案、命令输出：`zh` / `en` |
 | `extraMutating` | `[]` | 额外当成「改东西」的工具名，支持 `*` |
@@ -128,12 +129,12 @@ B · 稳妥 · 多 5 分钟
   放行（strict 下计额度）   未批准 ─▶ deny（返回可读理由，工具不执行）
                         已批准 ─▶ 放行
                               │
-                    tools/post-execute ─▶ 计数 +1，到预算后下一次被拦
+                    tools/post-execute ─▶ 计数 +1、估算 token，到上限后下一次被拦
 ```
 
 1. **提示词段**（`route-gate:policy`，挂在 `PLAN_POLICY` 之后）— 告诉模型卡里该写什么、被拒了怎么办。这一层让模型主动出卡，而不是撞墙。
 2. **`tools/pre-execute` 瀑布** — 返回 `{ kind: 'deny', reason }` 直接短路，工具根本不执行，模型收到 `Error: <理由>`。
-3. **`tools/post-execute` 瀑布** — 只统计真正执行过的调用（`result.isError !== true`），被拒的不消耗预算。
+3. **`tools/post-execute` 瀑布** — 只统计真正执行过的调用（`result.isError !== true`），被拒的不消耗预算；同时按输出字符数估 token（参数也算），因为一次 `bash` 打出一整个文件，比二十次 `grep` 更贵。
 
 状态机：`open` →（批准）→ `approved`；每回合开始回到 `open`；`/route off` 是会话级旁路。
 
@@ -148,7 +149,7 @@ B · 稳妥 · 多 5 分钟
 | P0 探针 | 用 `tools/pre-execute` + `agent/pre-step` 证明闸门能拦、能按回合重置 | ✅ 0.1.0 |
 | P1 闭环 | 路线卡 → 批准 → 放行 → 预算计数 → 超限收尾 | ✅ 0.1.0 |
 | P2 体验 | 卡片换成原生琥珀两键面板、推荐路线写进卡面、卡面压缩到一屏 | ✅ 0.2.0 |
-| P3 打磨 | 按 token 重量计预算、证据回执（卡里写验收命令，批准后自动跑）、按 cwd 复用历史卡片、探查转 subagent | 下一步 |
+| P3 打磨 | ✅ 0.5.0 按 token 重量计预算；待做：证据回执（卡里写验收命令，批准后自动跑）、按 cwd 复用历史卡片、探查转 subagent | 进行中 |
 | — | 上架 dshmarket、中英双语文档 | 待排期 |
 
 ---
@@ -186,7 +187,7 @@ route-gate 补的是另一半：
 
 - **未知工具默认放行**：第三方工具不在两份清单里时不会被拦（避免死锁），要拦就加 `extraMutating`。
 - **子 agent 共享父会话状态**：subagent 继承父 agent，路线卡由父会话批一次。
-- **预算按次数算**：一次 `read` 和一次 `bash` 都记 1 次，不按 token 折算（P3 要改的）。
+- **token 是估算的**：按字符数 ÷ 4 折算，不是宿主真实计费；用它来判「这条链是不是在烧钱」够了，别拿它对账。
 - **需要 `userQuestions` 服务**：没有这个服务的部署（纯 headless）请设 `trigger: off`，否则 `route_card` 会报错。
 
 ---
@@ -194,11 +195,11 @@ route-gate 补的是另一半：
 ## 开发
 
 ```bash
-npm test          # node --test，18 个用例
+npm test          # node --test，25 个用例
 ```
 
 > 沙箱里禁止子进程时，`node --test` 的分进程模式会 EPERM，改：
-> `node --test --test-isolation=none test/policy.test.js test/apply.test.js`
+> `node --test --test-isolation=none test/policy.test.js test/apply.test.js test/weight.test.js`
 
 ```
 lib/index.js    插件行：Config、pre-step / pre-execute / post-execute、route_card、/route
@@ -206,10 +207,11 @@ lib/policy.js   工具分类与预算算术（纯函数）
 lib/state.js    每 agent 的闸门状态机
 lib/card.js     路线卡渲染与按钮语义
 lib/prompt.js   注入系统提示词的策略段
-test/           policy 单测 + 假 cordis 上下文里的端到端用例
+lib/weight.js   工具输出与参数的 token 估算（纯函数）
+test/           policy / weight 单测 + 假 cordis 上下文里的端到端用例
 ```
 
-`test/apply.test.js` 用一个假的 cordis 上下文把插件跑起来：伪造三条链，断言「未批准必拒、批准后放行、预算到点必拦」。改闸门逻辑先跑它。
+`test/apply.test.js` 用一个假的 cordis 上下文把插件跑起来：伪造三条链，断言「未批准必拒、批准后放行、预算到点必拦、话痨工具按 token 先拦」。改闸门逻辑先跑它。
 
 ---
 
